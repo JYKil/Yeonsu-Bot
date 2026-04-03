@@ -156,17 +156,16 @@ class MonitorScheduler:
         logger.info("전체 범위 예약 가능! 예약 시도...")
         self._notify_status("예약 시도 중")
 
-        book_date = self._target_dates[0]
         max_retries = 2
 
         for attempt in range(1, max_retries + 1):
             try:
-                logger.info("[예약 시도 %d/%d] 날짜: %s", attempt, max_retries, book_date)
-                success = session.book(self._yeonsu_gbn, book_date)
+                logger.info("[예약 시도 %d/%d] 날짜: %s", attempt, max_retries, self._target_dates)
+                success = session.book(self._yeonsu_gbn, self._target_dates)
                 if success:
                     logger.info("예약 성공!")
                     self._notify_status("예약 완료")
-                    self._notify_booking_result(BookingResult.SUCCESS, book_date)
+                    self._notify_booking_result(BookingResult.SUCCESS, self._target_dates[0])
                     self._running = False
                     return
             except BookingError as exc:
@@ -177,7 +176,7 @@ class MonitorScheduler:
         # 모든 재시도 실패
         logger.warning("예약 재시도 모두 실패, 모니터링 계속")
         self._notify_status("모니터링 중")
-        self._notify_booking_result(BookingResult.FAILED, book_date)
+        self._notify_booking_result(BookingResult.FAILED, self._target_dates[0])
 
     def _notify_status(self, status: str):
         if self.on_status_change:

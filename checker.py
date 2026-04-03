@@ -273,18 +273,23 @@ class BrowserSession:
                 except Exception:
                     pass
 
-    def book(self, yeonsu_gbn: str, target_date: str) -> bool:
-        """지정된 날짜의 객실을 예약한다.
+    def book(self, yeonsu_gbn: str, target_dates: list[str]) -> bool:
+        """지정된 날짜 범위의 객실을 예약한다.
 
         Args:
             yeonsu_gbn: 연수원 코드
-            target_date: 예약할 날짜 (YYYYMMDD)
+            target_dates: 예약할 날짜 목록 (YYYYMMDD). 첫 번째=체크인, 마지막+1일=체크아웃
 
         Returns:
             예약 성공 여부
         """
         if not self.is_alive:
             raise BookingError("브라우저 세션이 활성화되지 않음")
+
+        checkin_date = target_dates[0]
+        # 체크아웃 = 마지막 날짜 + 1일
+        last_dt = datetime.strptime(target_dates[-1], "%Y%m%d")
+        checkout_date = (last_dt + timedelta(days=1)).strftime("%Y%m%d")
 
         page = None
         try:
@@ -300,6 +305,16 @@ class BrowserSession:
                 self._do_login()
                 page = self._context.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=30000)
+
+            # dialog 핸들러 등록 (자동 체크아웃 alert 등 대응)
+            dialog_results = []
+
+            def handle_dialog(dialog):
+                logger.info("[예약] dialog: type=%s, message=%s", dialog.type, dialog.message)
+                dialog_results.append({"type": dialog.type, "message": dialog.message})
+                dialog.accept()
+
+            page.on("dialog", handle_dialog)
 
             # 1단계: 연수원 선택
             facility_name = get_facility_name(yeonsu_gbn)
@@ -328,23 +343,34 @@ class BrowserSession:
             )
             page.wait_for_timeout(3000)
 
-            # 2단계: 달력 표시 후 날짜 클릭
+            # 2단계: 달력 표시 후 체크인 날짜 클릭
             page.evaluate("showCalendar()")
             page.wait_for_timeout(3000)
-            formatted = f"{target_date[:4]}.{target_date[4:6]}.{target_date[6:]}"
-            logger.info("[예약] 날짜 클릭: %s", target_date)
-            date_btn = page.locator(f'td.targetDate[data-date="{formatted}"] button')
-            if date_btn.count() == 0:
-                raise BookingError(f"날짜 {target_date} 버튼을 찾을 수 없음")
-            date_btn.first.click()
+
+            checkin_fmt = f"{checkin_date[:4]}.{checkin_date[4:6]}.{checkin_date[6:]}"
+            logger.info("[예약] 체크인 클릭: %s", checkin_date)
+            checkin_btn = page.locator(f'td.targetDate[data-date="{checkin_fmt}"] button')
+            if checkin_btn.count() == 0:
+                raise BookingError(f"체크인 날짜 {checkin_date} 버튼을 찾을 수 없음")
+            checkin_btn.first.click()
             page.wait_for_timeout(2000)
 
-            # 3단계: "선택일로 예약하기" 버튼 클릭 (button.btn_check → search() 호출)
-            logger.info("[예약] '선택일로 예약하기' 클릭")
-            reserve_btn = page.locator("button.btn_check")
-            if reserve_btn.count() == 0:
-                raise BookingError("'선택일로 예약하기' 버튼을 찾을 수 없음")
-            reserve_btn.first.click()
+            # 체크아웃 날짜 클릭 (1박이면 자동 설정 alert → dialog 핸들러가 수락)
+            if len(target_dates) > 1:
+                checkout_fmt = f"{checkout_date[:4]}.{checkout_date[4:6]}.{checkout_date[6:]}"
+                logger.info("[예약] 체크아웃 클릭: %s", checkout_date)
+                checkout_btn = page.locator(f'td.targetDate[data-date="{checkout_fmt}"] button')
+                if checkout_btn.count() == 0:
+                    raise BookingError(f"체크아웃 날짜 {checkout_date} 버튼을 찾을 수 없음")
+                checkout_btn.first.click()
+                page.wait_for_timeout(2000)
+            else:
+                logger.info("[예약] 1박 — 체크아웃 자동 설정 대기")
+                page.wait_for_timeout(1000)
+
+            # 3단계: search() 직접 호출 (선택일로 예약하기)
+            logger.info("[예약] search() 호출 (선택일로 예약하기)")
+            page.evaluate("search()")
             page.wait_for_timeout(2000)
 
             # 4단계: 기관배정 팝업 모달 닫기 (표시되는 경우에만)
@@ -364,16 +390,7 @@ class BrowserSession:
             room_btn.first.click()
             page.wait_for_timeout(1000)
 
-            # 6단계: dialog 핸들러 사전 등록 + "예약하기" 클릭
-            dialog_results = []
-
-            def handle_dialog(dialog):
-                logger.info("[예약] dialog 발생: type=%s, message=%s", dialog.type, dialog.message)
-                dialog_results.append({"type": dialog.type, "message": dialog.message})
-                dialog.accept()
-
-            page.on("dialog", handle_dialog)
-
+            # 6단계: "예약하기" 클릭 (dialog 핸들러는 이미 등록됨)
             logger.info("[예약] '예약하기' 클릭")
             book_btn = page.locator("button:has-text('예약하기'), a:has-text('예약하기')")
             if book_btn.count() == 0:
