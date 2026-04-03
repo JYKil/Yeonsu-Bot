@@ -328,7 +328,9 @@ class BrowserSession:
             )
             page.wait_for_timeout(3000)
 
-            # 2단계: 달력에서 날짜 클릭
+            # 2단계: 달력 표시 후 날짜 클릭
+            page.evaluate("showCalendar()")
+            page.wait_for_timeout(3000)
             formatted = f"{target_date[:4]}.{target_date[4:6]}.{target_date[6:]}"
             logger.info("[예약] 날짜 클릭: %s", target_date)
             date_btn = page.locator(f'td.targetDate[data-date="{formatted}"] button')
