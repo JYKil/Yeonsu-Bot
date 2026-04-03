@@ -309,7 +309,10 @@ class App(ctk.CTk):
             "1. '설정' 탭에서 아이디, 비밀번호, 연수원, 체크인/체크아웃, 확인간격을 설정\n"
             "2. [시작] 버튼을 누르면 자동으로 모니터링 + 예약 진행\n"
             "3. 예약 완료 시 Slack으로 알림을 보내고 자동 정지\n"
-            "4. 예약 실패 시 Slack 알림 후 모니터링 계속"
+            "4. 예약 실패 시 Slack 알림 후 모니터링 계속\n\n"
+            "[알림]\n"
+            "- 2026-06-02 이후 GitHub Actions 빌드가 깨질 수 있음\n"
+            "  → actions/checkout, setup-python을 Node.js 24 지원 버전으로 업그레이드 필요"
         )
         ctk.CTkLabel(frame, text=info_text, justify="left", wraplength=450, anchor="nw").pack(
             fill="both", expand=True, padx=12, pady=12

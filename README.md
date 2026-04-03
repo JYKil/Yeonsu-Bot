@@ -13,3 +13,7 @@
 - 모니터링 중 (빈방 찾는 중)
 - 예약 진행 중 (빈방 발견, 자동 예약 시도)
 - 예약 완료
+
+## 주의사항
+
+- **2026-06-02**: GitHub Actions Node.js 20 지원 종료 → `actions/checkout@v4`, `actions/setup-python@v5`를 Node.js 24 지원 버전으로 업그레이드 필요 (`.github/workflows/build-exe.yml`)
