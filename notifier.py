@@ -8,7 +8,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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"
+SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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"
 
 
 def _post_webhook(webhook_url: str, payload: dict) -> bool:
