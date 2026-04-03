@@ -54,6 +54,11 @@ class MonitorScheduler:
             logger.warning("스케줄러가 이미 실행 중입니다.")
             return
 
+        # 이전 워커 스레드가 아직 살아있으면 종료 대기
+        if self._worker and self._worker.is_alive():
+            logger.info("이전 워커 스레드 종료 대기...")
+            self._worker.join(timeout=10)
+
         self._interval = interval_seconds
         self._running = True
         self._yeonsu_gbn = yeonsu_gbn
