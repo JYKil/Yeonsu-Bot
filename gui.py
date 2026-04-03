@@ -1,6 +1,7 @@
 """CustomTkinter GUI: 설정, 상태, 로그, 자동 예약."""
 
 import logging
+import time
 import tkinter as tk
 from datetime import date, datetime, timedelta
 from tkinter import messagebox
@@ -122,12 +123,19 @@ class GUILogHandler(logging.Handler):
     def __init__(self, text_widget: ctk.CTkTextbox):
         super().__init__()
         self._widget = text_widget
+        self._last_emit_time: float = 0
 
     def emit(self, record):
         msg = self.format(record)
+        now = time.time()
+        gap = now - self._last_emit_time if self._last_emit_time else 0
+        self._last_emit_time = now
 
         def _append():
             self._widget.configure(state="normal")
+            # 마지막 로그로부터 60초 이상 경과 시 빈 줄 삽입
+            if gap >= 60:
+                self._widget.insert("end", "\n")
             self._widget.insert("end", msg + "\n")
             self._widget.see("end")
             self._widget.configure(state="disabled")
@@ -170,7 +178,22 @@ class App(ctk.CTk):
                 return
             ch = event.char.lower()
             w = event.widget
-            # tkinter.Entry 또는 CTkEntry 내부 Entry만 처리
+
+            # tk.Text (CTkTextbox 내부) 처리
+            if isinstance(w, tk.Text):
+                if ch == "c":
+                    try:
+                        self.clipboard_clear()
+                        self.clipboard_append(w.get("sel.first", "sel.last"))
+                    except tk.TclError:
+                        pass
+                    return "break"
+                if ch == "a":
+                    w.tag_add("sel", "1.0", "end")
+                    return "break"
+                return
+
+            # tk.Entry (CTkEntry 내부) 처리
             if not isinstance(w, tk.Entry):
                 return
             if ch == "v":
