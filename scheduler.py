@@ -167,7 +167,7 @@ class MonitorScheduler:
         return
       try:
         logger.info("[예약 시도 %d/%d] 날짜: %s", attempt, max_retries, self._target_dates)
-        success = session.book(self._yeonsu_gbn, self._target_dates)
+        success = session.book(self._yeonsu_gbn, self._target_dates, stop_event=stop_event)
         if success:
           logger.info("예약 성공!")
           self._notify_status("예약 완료")
@@ -177,7 +177,8 @@ class MonitorScheduler:
       except BookingError as exc:
         logger.warning("[예약 실패 %d/%d] %s", attempt, max_retries, exc)
         if attempt < max_retries:
-          time.sleep(3)
+          if stop_event.wait(3):
+            return  # 중지 신호 수신
 
     # 모든 재시도 실패
     logger.warning("예약 재시도 모두 실패, 모니터링 계속")
