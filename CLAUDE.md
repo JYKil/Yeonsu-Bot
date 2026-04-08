@@ -8,9 +8,9 @@
 
 - **main.py**: 진입점, 로깅 설정 후 GUI 실행
 - **gui.py**: CustomTkinter 기반 GUI. 설정/안내 탭, 상태 표시, 로그 영역. `MonitorScheduler`와 콜백으로 통신
-- **checker.py**: `BrowserSession` 클래스. Playwright로 로그인 → 연수원 선택 → 달력 조회 → 자동 예약 (8단계 플로우)
-- **scheduler.py**: `MonitorScheduler` 클래스. 워커 스레드에서 `BrowserSession`을 소유하고 주기적 체크 + 예약 시도
-- **notifier.py**: Slack Incoming Webhook 알림 (빈방 발견, 예약 성공/실패, 테스트)
+- **checker.py**: `BrowserSession` 클래스. Playwright로 로그인 → 연수원 선택 → 달력 조회 → 자동 예약 (7단계 플로우: 연수원 선택 → 달력 날짜 클릭 → 선택일로 예약하기 → 기관배정 팝업 닫기 → 객실선택하기 → 예약하기 → 예약안내 팝업 동의). `stop_event`를 받아 주요 단계마다 중지 체크.
+- **scheduler.py**: `MonitorScheduler` 클래스. 워커 스레드에서 `BrowserSession`을 소유하고 주기적 체크 + 예약 시도. `stop_event`를 `book()`에 전달하여 즉시 중지 대응.
+- **notifier.py**: Slack Incoming Webhook 알림 (빈방 발견, 예약 성공, 테스트)
 - **config.py**: settings.json 저장/불러오기, 비밀번호 Base64 인코딩
 - **facilities.py**: 10개 연수원 이름↔코드 매핑
 
